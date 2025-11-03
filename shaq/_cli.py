@@ -180,7 +180,43 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Overwrite title of the song",
     )
+    advanced_group.add_argument(
+        "--embed-album-cover",
+        action="store_true",
+        help="Embedd the album image of the song into the metadata",
+    )
     return parser
+
+def embed_album_cover(mp3_file, image_url):
+    import eyed3
+    import requests
+
+
+    # Download the image
+    response = requests.get(image_url)
+    if response.status_code != 200:
+        raise Exception("Failed to download image")
+
+    image_data = response.content
+    mime_type = response.headers.get("Content-Type", "image/jpeg")  # fallback to jpeg
+
+    # Load MP3 file
+    audiofile = eyed3.load(mp3_file)
+    if audiofile.tag is None:
+        audiofile.initTag()
+
+    # Set album art
+    audiofile.tag.images.set(
+        eyed3.id3.frames.ImageFrame.FRONT_COVER,
+        image_data,
+        mime_type,
+        u"Album cover"
+    )
+
+    print(mp3_file)
+    # Save changes
+    audiofile.tag.save()
+    print("Album cover embedded successfully!")
 
 def update_Metadata(console, title, artist, path):
     
@@ -276,6 +312,9 @@ def main() -> None:
             # Forces the shazam image server to fetch a
             # high-resolution album cover.
             album_cover_hq = album_cover.replace("/400x400cc.jpg", "/1000x1000cc.png")
+            
+            embed_album_cover(args.input,album_cover_hq)
             print(f"Album Cover: {album_cover_hq}")
+
 
 
